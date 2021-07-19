@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000
 const expressServer = app.listen(PORT)
 
 const io = socketio(expressServer, {
-    cors: { origin: 'https://jolly-northcutt-39458a.netlify.app' },
+    cors: { origin: '*' },
 })
 io.on('connection', (socket) => {
     let roomName
@@ -31,7 +31,6 @@ io.on('connection', (socket) => {
     socket.on('join-room', (roomCode) => {
         const userCount = updateUsersInRoom('/', roomCode)
         roomName = roomCode
-        // console.log(userCount)
         if (userCount <= 1) {
             socket.join(roomCode)
             socket.to(roomCode).emit('get-data')
@@ -68,13 +67,26 @@ io.on('connection', (socket) => {
         socket.to(roomName).emit('tie-game')
     })
 
-    socket.on('get-name', () =>
-        io.in(roomName).emit('name', socket.handshake.query.name)
-    )
+    socket.on('get-name', (name) => io.in(roomName).emit('name', name))
 
     socket.on('get-users-count', () => {
         const members = updateUsersInRoom('/', roomName)
         io.in(roomName).emit('updated-users-count', members)
+    })
+
+    socket.on('newMessage', (msg) => {
+        io.to(roomName).emit('messageFromServer', {
+            ...msg,
+            id: socket.id,
+        })
+    })
+
+    socket.on('history', () => {
+        socket.to(roomName).emit('getHis')
+    })
+
+    socket.on('messages', (m) => {
+        socket.to(roomName).emit('getMsgs', m)
     })
 })
 
